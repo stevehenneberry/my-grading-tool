@@ -2,11 +2,17 @@ import streamlit as st
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import spacy
+import os
 from collections import Counter
 import pandas as pd
 
-# Load the grammar "brain"
-nlp = spacy.load("en_core_web_sm")
+# --- SELF-HEALING LANGUAGE MODEL DOWNLOAD ---
+try:
+    nlp = spacy.load("en_core_web_sm")
+except OSError:
+    # If the model isn't found, download it
+    os.system("python -m spacy download en_core_web_sm")
+    nlp = spacy.load("en_core_web_sm")
 
 st.title("📝 Oral Homework Analyzer Pro")
 
