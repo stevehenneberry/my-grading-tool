@@ -5,8 +5,7 @@ import matplotlib.pyplot as plt
 from collections import Counter
 import pandas as pd
 
-# Try to load the model. If it's still being installed by the server, 
-# it will catch the error and show a spinner instead of crashing.
+# --- 1. LOAD THE NLP MODEL ---
 @st.cache_resource
 def load_nlp():
     try:
@@ -20,19 +19,7 @@ if nlp is None:
     st.warning("The grammar engine is warming up. Please wait 30 seconds and refresh the page!")
     st.stop()
 
-# ... (rest of the code follows)
-
-# --- 2. COLOR LOGIC FOR THE WORDCLOUD ---
-def pos_color_func(word, font_size, position, orientation, random_state=None, **kwargs):
-    doc = nlp(word)
-    tag = doc[0].pos_ if len(doc) > 0 else ""
-    if tag == "VERB": return "hsl(210, 100%, 50%)"   # Blue
-    if tag == "ADJ":  return "hsl(120, 100%, 25%)"   # Green
-    if tag == "ADV":  return "hsl(280, 100%, 50%)"   # Purple
-    if tag == "NOUN": return "hsl(30, 100%, 50%)"    # Orange
-    return "hsl(0, 0%, 70%)"                         # Gray
-
-# --- 3. THE USER INTERFACE ---
+# --- 2. THE USER INTERFACE ---
 st.set_page_config(page_title="Oral Homework Analyzer", layout="wide")
 st.title("📝 Oral Homework Analyzer Pro")
 
@@ -43,29 +30,30 @@ with st.sidebar:
 
 transcript = st.text_area("Paste your Microsoft Word Dictation here:", height=300)
 
-# --- 4. THE ANALYSIS ---
+# --- 3. THE ANALYSIS ---
 if st.button("Analyze My Homework"):
     if transcript:
         doc = nlp(transcript)
-        # Build this AFTER doc = nlp(transcript), before generating the word cloud
-word_pos_map = {}
-for token in doc:
-    if not token.is_punct and not token.is_space:
-        word_pos_map[token.text.lower()] = token.pos_
 
-# Replace your existing pos_color_func with this:
-def pos_color_func(word, font_size, position, orientation, random_state=None, **kwargs):
-    tag = word_pos_map.get(word.lower(), "")
-    if tag == "VERB": return "hsl(210, 100%, 50%)"
-    if tag == "ADJ":  return "hsl(120, 100%, 25%)"
-    if tag == "ADV":  return "hsl(280, 100%, 50%)"
-    if tag == "NOUN": return "hsl(30, 100%, 50%)"
-    return "hsl(0, 0%, 70%)"
-        
+        # Build a word -> POS lookup from the full transcript (context-aware)
+        word_pos_map = {}
+        for token in doc:
+            if not token.is_punct and not token.is_space:
+                word_pos_map[token.text.lower()] = token.pos_
+
+        # Color function now uses context-aware POS tags
+        def pos_color_func(word, font_size, position, orientation, random_state=None, **kwargs):
+            tag = word_pos_map.get(word.lower(), "")
+            if tag == "VERB": return "hsl(210, 100%, 50%)"   # Blue
+            if tag == "ADJ":  return "hsl(120, 100%, 25%)"   # Green
+            if tag == "ADV":  return "hsl(280, 100%, 50%)"   # Purple
+            if tag == "NOUN": return "hsl(30, 100%, 50%)"    # Orange
+            return "hsl(0, 0%, 70%)"                         # Gray
+
         words = [token.text for token in doc if not token.is_punct and not token.is_space]
         word_count = len(words)
         wpm = word_count / duration
-        
+
         st.success(f"Analysis Complete for {name}!")
         col1, col2 = st.columns(2)
         col1.metric("Words Per Minute", f"{wpm:.1f}")
@@ -74,17 +62,17 @@ def pos_color_func(word, font_size, position, orientation, random_state=None, **
         st.divider()
 
         left_col, right_col = st.columns([2, 1])
-        
+
         with left_col:
             st.subheader("Vocabulary Cloud")
             wc = WordCloud(background_color="white", width=800, height=500).generate(transcript)
             wc.recolor(color_func=pos_color_func)
-            
+
             fig, ax = plt.subplots()
             ax.imshow(wc, interpolation='bilinear')
             ax.axis("off")
             st.pyplot(fig)
-            
+
             st.markdown("""
             **Color Key:**
             * 🔵 **Blue**: Verbs (Actions)
