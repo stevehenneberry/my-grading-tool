@@ -14,6 +14,8 @@ from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
     Image as RLImage, HRFlowable
 )
+import gspread
+from google.oauth2.service_account import Credentials
 
 # --- 1. LOAD THE NLP MODEL ---
 @st.cache_resource
@@ -71,7 +73,64 @@ def get_complexity_indicator(ttr, avg_sentence_length, lexical_density, unique_c
     elif score <= 12: return score, "B2"
     else:             return score, "C1–C2"
 
-# --- 4. HELPER: GENERATE PDF REPORT ---
+# --- 4. HELPER: GOOGLE SHEETS LOGGING ---
+@st.cache_resource
+def get_gsheet_client():
+    """Connect to Google Sheets using credentials stored in Streamlit Secrets."""
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    creds = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=scopes
+    )
+    return gspread.authorize(creds)
+
+def log_to_sheets(name, duration, wpm, word_count, ttr, avg_sentence_length,
+                  lexical_density, avg_word_length, complexity_label,
+                  total_fillers, filler_pct, unique_connective_count,
+                  adj_counts, verb_counts):
+    """Append one row of results to the configured Google Sheet."""
+    try:
+        client = get_gsheet_client()
+        sheet = client.open(st.secrets["gsheet"]["sheet_name"]).sheet1
+
+        # Add header row if the sheet is empty
+        if sheet.row_count == 0 or sheet.cell(1, 1).value is None:
+            sheet.append_row([
+                "Timestamp", "Student Name", "Duration (min)",
+                "WPM", "Word Count", "Vocabulary Diversity (TTR)",
+                "Avg Sentence Length", "Lexical Density", "Avg Word Length",
+                "Complexity Level", "Filler Words", "Filler %",
+                "Unique Connectives", "Top Adjective", "Top Verb"
+            ])
+
+        top_adj  = adj_counts[0][0]  if adj_counts  else "N/A"
+        top_verb = verb_counts[0][0] if verb_counts else "N/A"
+
+        sheet.append_row([
+            datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            name,
+            round(duration, 1),
+            round(wpm, 1),
+            word_count,
+            round(ttr, 2),
+            round(avg_sentence_length, 1),
+            round(lexical_density, 2),
+            round(avg_word_length, 1),
+            complexity_label,
+            total_fillers,
+            round(filler_pct, 1),
+            unique_connective_count,
+            top_adj,
+            top_verb
+        ])
+        return True
+    except Exception as e:
+        return str(e)
+
+# --- 5. HELPER: GENERATE PDF REPORT ---
 def generate_pdf_report(name, duration, wpm, word_count, ttr, avg_sentence_length,
                          lexical_density, avg_word_length,
                          adj_counts, verb_counts,
@@ -491,6 +550,22 @@ if st.button("Analyze My Homework"):
                 """)
 
         st.divider()
+
+        # --- LOG TO GOOGLE SHEETS ---
+        if "gcp_service_account" in st.secrets:
+            log_result = log_to_sheets(
+                name=name, duration=duration, wpm=wpm, word_count=word_count,
+                ttr=ttr, avg_sentence_length=avg_sentence_length,
+                lexical_density=lexical_density, avg_word_length=avg_word_length,
+                complexity_label=complexity_label,
+                total_fillers=total_fillers, filler_pct=filler_pct,
+                unique_connective_count=unique_connective_count,
+                adj_counts=adj_counts, verb_counts=verb_counts
+            )
+            if log_result is True:
+                st.toast("✅ Results saved to class record.", icon="📊")
+            else:
+                st.toast(f"⚠️ Could not save to Sheets: {log_result}", icon="⚠️")
 
         # --- DOWNLOAD PDF BUTTON ---
         pdf_buffer = generate_pdf_report(
