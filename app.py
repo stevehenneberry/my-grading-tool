@@ -47,6 +47,20 @@ transcript = st.text_area("Paste your Microsoft Word Dictation here:", height=30
 if st.button("Analyze My Homework"):
     if transcript:
         doc = nlp(transcript)
+        # Build this AFTER doc = nlp(transcript), before generating the word cloud
+word_pos_map = {}
+for token in doc:
+    if not token.is_punct and not token.is_space:
+        word_pos_map[token.text.lower()] = token.pos_
+
+# Replace your existing pos_color_func with this:
+def pos_color_func(word, font_size, position, orientation, random_state=None, **kwargs):
+    tag = word_pos_map.get(word.lower(), "")
+    if tag == "VERB": return "hsl(210, 100%, 50%)"
+    if tag == "ADJ":  return "hsl(120, 100%, 25%)"
+    if tag == "ADV":  return "hsl(280, 100%, 50%)"
+    if tag == "NOUN": return "hsl(30, 100%, 50%)"
+    return "hsl(0, 0%, 70%)"
         
         words = [token.text for token in doc if not token.is_punct and not token.is_space]
         word_count = len(words)
