@@ -2,21 +2,13 @@ import streamlit as st
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import spacy
-import subprocess
-import sys
 from collections import Counter
 import pandas as pd
 
-# --- 1. THE "BRAIN" SETUP ---
-# This ensures the English grammar model is installed on the server
-def load_nlp():
-    try:
-        return spacy.load("en_core_web_sm")
-    except OSError:
-        subprocess.run([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
-        return spacy.load("en_core_web_sm")
+# Now that it's in requirements.txt, we can just load it directly!
+nlp = spacy.load("en_core_web_sm")
 
-nlp = load_nlp()
+# ... (the rest of your code remains the same)
 
 # --- 2. COLOR LOGIC FOR THE WORDCLOUD ---
 def pos_color_func(word, font_size, position, orientation, random_state=None, **kwargs):
