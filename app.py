@@ -1,5 +1,8 @@
 import streamlit as st
 import spacy
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+from collections import Counter
 
 # Try to load the model. If it's still being installed by the server, 
 # it will catch the error and show a spinner instead of crashing.
