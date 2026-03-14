@@ -3,6 +3,7 @@ import spacy
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 from collections import Counter
+import pandas as pd
 
 # Try to load the model. If it's still being installed by the server, 
 # it will catch the error and show a spinner instead of crashing.
