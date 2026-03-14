@@ -1,17 +1,22 @@
 import streamlit as st
-from wordcloud import WordCloud
-import matplotlib.pyplot as plt
 import spacy
-from collections import Counter
-import pandas as pd
 
-# --- 1. THE "BRAIN" SETUP ---
-# We try to load the model. If it's not there, we show a friendly message.
-try:
-    nlp = spacy.load("en_core_web_sm")
-except:
-    st.error("The language model is still installing. Please refresh the page in 30 seconds!")
+# Try to load the model. If it's still being installed by the server, 
+# it will catch the error and show a spinner instead of crashing.
+@st.cache_resource
+def load_nlp():
+    try:
+        return spacy.load("en_core_web_sm")
+    except:
+        return None
+
+nlp = load_nlp()
+
+if nlp is None:
+    st.warning("The grammar engine is warming up. Please wait 30 seconds and refresh the page!")
     st.stop()
+
+# ... (rest of the code follows)
 
 # --- 2. COLOR LOGIC FOR THE WORDCLOUD ---
 def pos_color_func(word, font_size, position, orientation, random_state=None, **kwargs):
