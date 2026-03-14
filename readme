@@ -1,0 +1,2 @@
+This tool is designed to assess text from student dictation exercises. The target audience is non-native English speakers. The purpose is to provide students with immediate and helpful feedback on their output. The Wordmap is intended to give them a visual representation of their English usage; the top 5 adjectives and verbs are meant to highlight words they may rely on too much, and the Detailed Analysis provides a deeper dive into their L2 production.
+This code was all created via Gemini, and later Claude once Gemini became unreliable. Mar 14, 2026, 17:51:27
